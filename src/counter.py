@@ -5,16 +5,21 @@ import numpy as np
 import argparse
 import imutils
 import cv2
+import os
+from datetime import date, datetime
 
 # get frames from video
-exec(open('record_video.py').read())
+#exec(open('record_video.py').read())
 
 # initialize the HOG descriptor/person detector
 hog = cv2.HOGDescriptor()
 hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
+save_dir = '/home/pi/Projects/Videos/Bounded/{}/'.format(date.today())
+os.mkdir(save_dir)
+
 # loop over the image paths to detect people
-for imagePath in paths.list_images('/home/pi/Projects/Videos'):
+for imagePath in paths.list_images('/home/pi/Projects/Videos/2020-11-01'):
     # load image
 	image = cv2.imread(imagePath)
 	image = imutils.resize(image, width=min(400, image.shape[1]))
@@ -41,7 +46,11 @@ for imagePath in paths.list_images('/home/pi/Projects/Videos'):
 	print("[INFO] {}: {} original boxes, {} after suppression".format(
 		filename, len(rects), len(pick)))
 
+	# save image with bounding box
+	file_path = save_dir + '{}.jpg'.format(datetime.now())
+	cv2.imwrite(file_path, image)
+
 	# show the output images
-	cv2.imshow("Before NMS", orig)
+	'''cv2.imshow("Before NMS", orig)
 	cv2.imshow("After NMS", image)
-	cv2.waitKey(0)
+	cv2.waitKey(0)'''
