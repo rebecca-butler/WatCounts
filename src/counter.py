@@ -1,17 +1,16 @@
-import imutils
-from imutils.object_detection import non_max_suppression
-from imutils import paths
-import numpy as np
-import argparse
-import imutils
 import cv2
+import imutils
+import numpy as np
 import os
+import picamera
 import time
-from datetime import date, datetime
+from datetime import datetime
+from imutils.object_detection import non_max_suppression
+from picamera.array import PiRGBArray
+
+# custom classes
 from centroidtracker import CentroidTracker
 from trackableobject import TrackableObject
-import picamera
-from picamera.array import PiRGBArray
 
 # initialize camera settings
 camera = picamera.PiCamera()
@@ -20,6 +19,11 @@ camera.resolution = (640, 480)
 rawCapture = PiRGBArray(camera, size=(640, 480))
 time.sleep(0.1)
 
+# create new directory to store frames
+save_dir = '/home/pi/Projects/Videos/{}/'.format(datetime.now())
+os.mkdir(save_dir)
+
+# instantiate centroid tracker
 ct = CentroidTracker(maxDisappeared=40, maxDistance=50)
 trackableObjects = {}
 
@@ -30,7 +34,7 @@ numInLibrary = 0 # global count
 numExited = 0 # number of people that have exited library (moved down)
 numEntered = 0 # number of people that have entered library (moved up)
 
-# initialize the HOG descriptor/person detector
+# initialize HOG descriptor/person detector
 hog = cv2.HOGDescriptor()
 hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
@@ -58,6 +62,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 		cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 0), 2)
 
 	# draw horizontal line across frame to determine crossing direction
+	# start point, end point, colour, thickness
 	cv2.line(image, (0, H // 2), (W, H // 2), (0, 255, 255), 2)
 
 	# use centroid tracker to associate old centroids with new centroids
@@ -93,7 +98,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 		# store trackable object in dict
 		trackableObjects[objectID] = to
 
-		# draw ID of object and centroid of object on output frame
+		# draw each object's ID and centroid on output frame
 		text = "ID {}".format(objectID)
 		cv2.putText(image, text, (centroid[0] - 10, centroid[1] - 10),
 			cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
@@ -102,11 +107,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	# show and save output frame
 	cv2.imshow("Frame", image)
 	key = cv2.waitKey(1) & 0xFF
-	cv2.imwrite('/home/pi/Projects/Videos/{}.jpg'.format(datetime.datetime.now()), image)
-
-	# break if q pressed
-	if key == ord("q"):
-		break
+	cv2.imwrite(save_dir + str(datetime.now()) + '.jpg', image)
 
 	# update global count
 	numInLibrary = numInLibrary + numEntered - numExited
@@ -119,3 +120,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	else:
 		# deactivate lock
  		print("Maximum has not been reached")
+
+	# clear stream for next frame
+	rawCapture.truncate(0)
