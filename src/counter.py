@@ -1,3 +1,4 @@
+import argparse
 import cv2
 import imutils
 import numpy as np
@@ -18,6 +19,11 @@ camera.framerate = 32
 camera.resolution = (640, 480)
 rawCapture = PiRGBArray(camera, size=(640, 480))
 time.sleep(0.1)
+
+# initialize arg parser
+parser = argparse.ArgumentParser(description='WatCounts COVID Occupancy Tracker')
+parser.add_argument('-above', action='store_true', help='Camera positioned above entrance')
+args = parser.parse_args()
 
 # create new directory to store frames
 save_dir = '/home/pi/Projects/Videos/{}/'.format(datetime.now())
@@ -67,10 +73,12 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	for (xA, yA, xB, yB) in pick:
 		cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 0), 2)
 
-	# draw horizontal line across frame to determine crossing direction
+	# draw line across center of frame to determine crossing direction
 	# start point, end point, colour, thickness
-	#cv2.line(image, (0, H // 2), (W, H // 2), (0, 255, 255), 2)
-	cv2.line(image, (W // 2, 0), (W // 2, H), (0, 255, 255), 2)
+	if args.above:
+		cv2.line(image, (0, H // 2), (W, H // 2), (0, 255, 255), 2) # horizontal line
+	else:
+		cv2.line(image, (W // 2, 0), (W // 2, H), (0, 255, 255), 2) # vertical line
 
 	# use centroid tracker to associate old centroids with new centroids
 	objects = ct.update(rects)
@@ -84,33 +92,43 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 			to = TrackableObject(objectID, centroid)
 
 		else:
-			# difference between y-coord of current centroid and mean of previous 
-			# centroids gives direction (down positive, up negative)
-			'''y = [c[1] for c in to.centroids]
-			direction = centroid[1] - np.mean(y)'''
-			x = [c[0] for c in to.centroids]
-			direction = centroid[0] - np.mean(x)
+			# difference between coord of current centroid and mean of previous centroids gives direction 
+
+			# (down positive, up negative)
+			if args.above:
+				y = [c[1] for c in to.centroids]
+				direction = centroid[1] - np.mean(y)
+
+			# (left positive, right negative)
+			else:
+				x = [c[0] for c in to.centroids]
+				direction = centroid[0] - np.mean(x)
+
 			to.centroids.append(centroid)
 
 			# check if object has been counted or not
 			if not to.counted:
-				# if direction is negative (object is moving up) and centroid is above center line, count object
-				'''if direction < 0 and centroid[1] < H // 2:
-					numEntered += 1
-					to.counted = True
+				if args.above:
+					# if direction is negative (object is moving up) and centroid is above center line, count object
+					if direction < 0 and centroid[1] < H // 2:
+						numEntered += 1
+						to.counted = True
 
-				# if direction is positive (object is moving down) and centroid is below center line, count object
-				elif direction > 0 and centroid[1] > H // 2:
-					numExited += 1
-					to.counted = True'''
-				if direction < 0 and centroid[0] < W // 2:
-					numEntered += 1
-					to.counted = True
+					# if direction is positive (object is moving down) and centroid is below center line, count object
+					elif direction > 0 and centroid[1] > H // 2:
+						numExited += 1
+						to.counted = True
 
-				# if direction is positive (object is moving down) and centroid is below center line, count object
-				elif direction > 0 and centroid[0] > W // 2:
-					numExited += 1
-					to.counted = True
+				else:
+					# if direction is negative (object is moving left) and centroid is left of center line, count object
+					if direction < 0 and centroid[0] < W // 2:
+						numEntered += 1
+						to.counted = True
+
+					# if direction is positive (object is moving right) and centroid is right of center line, count object
+					elif direction > 0 and centroid[0] > W // 2:
+						numExited += 1
+						to.counted = True
 
 		# store trackable object in dict
 		trackableObjects[objectID] = to
@@ -136,10 +154,11 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	# activate locking system if needed
 	if (prevNumInLibrary <= 45 and numInLibrary > 45):
 		print("Activating lock")
-		# activate lock
+		# TODO: code to activate lock
+	
 	elif (prevNumInLibrary > 45 and numInLibrary < 45):
  		print("Deactivating lock")
-		# deactivate lock
+		# TODO: code to deactivate lock
 
 	prevNumInLibrary = numInLibrary
 
