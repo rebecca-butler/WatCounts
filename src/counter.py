@@ -24,15 +24,17 @@ save_dir = '/home/pi/Projects/Videos/{}/'.format(datetime.now())
 os.mkdir(save_dir)
 
 # instantiate centroid tracker
-ct = CentroidTracker(maxDisappeared=40, maxDistance=50)
+ct = CentroidTracker(maxDisappeared=50, maxDistance=150)
 trackableObjects = {}
 
 W = None # width of frame
 H = None # height of frame
 
 numInLibrary = 0 # global count
-numExited = 0 # number of people that have exited library (moved down)
-numEntered = 0 # number of people that have entered library (moved up)
+prevNumInLibrary = 0 # prev global count
+
+numExited = 0 # number of people that have exited library
+numEntered = 0 # number of people that have entered library
 
 # initialize HOG descriptor/person detector
 hog = cv2.HOGDescriptor()
@@ -44,6 +46,10 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
 	if H is None or W is None:
 		(H, W) = image.shape[:2]
+
+	# reset local count
+	numEntered = 0
+	numExited = 0
 
 	# detect people in the image
 	(rects, weights) = hog.detectMultiScale(image, winStride=(4, 4),
@@ -63,7 +69,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
 	# draw horizontal line across frame to determine crossing direction
 	# start point, end point, colour, thickness
-	cv2.line(image, (0, H // 2), (W, H // 2), (0, 255, 255), 2)
+	#cv2.line(image, (0, H // 2), (W, H // 2), (0, 255, 255), 2)
+	cv2.line(image, (W // 2, 0), (W // 2, H), (0, 255, 255), 2)
 
 	# use centroid tracker to associate old centroids with new centroids
 	objects = ct.update(rects)
@@ -79,19 +86,29 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 		else:
 			# difference between y-coord of current centroid and mean of previous 
 			# centroids gives direction (down positive, up negative)
-			y = [c[1] for c in to.centroids]
-			direction = centroid[1] - np.mean(y)
+			'''y = [c[1] for c in to.centroids]
+			direction = centroid[1] - np.mean(y)'''
+			x = [c[0] for c in to.centroids]
+			direction = centroid[0] - np.mean(x)
 			to.centroids.append(centroid)
 
 			# check if object has been counted or not
 			if not to.counted:
 				# if direction is negative (object is moving up) and centroid is above center line, count object
-				if direction < 0 and centroid[1] < H // 2:
+				'''if direction < 0 and centroid[1] < H // 2:
 					numEntered += 1
 					to.counted = True
 
 				# if direction is positive (object is moving down) and centroid is below center line, count object
 				elif direction > 0 and centroid[1] > H // 2:
+					numExited += 1
+					to.counted = True'''
+				if direction < 0 and centroid[0] < W // 2:
+					numEntered += 1
+					to.counted = True
+
+				# if direction is positive (object is moving down) and centroid is below center line, count object
+				elif direction > 0 and centroid[0] > W // 2:
 					numExited += 1
 					to.counted = True
 
@@ -111,15 +128,20 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
 	# update global count
 	numInLibrary = numInLibrary + numEntered - numExited
-	print("Num in library: {}, num exited: {}, num entered: {}".format(numInLibrary, numExited, numEntered))
+
+	# print message if count was updated
+	if (numInLibrary != prevNumInLibrary):
+		print("Num in library: {}, num exited: {}, num entered: {}".format(numInLibrary, numExited, numEntered))
 
 	# activate locking system if needed
-	if (numInLibrary > 45):
-		print("Maximum reached")
+	if (prevNumInLibrary <= 45 and numInLibrary > 45):
+		print("Activating lock")
 		# activate lock
-	else:
+	elif (prevNumInLibrary > 45 and numInLibrary < 45):
+ 		print("Deactivating lock")
 		# deactivate lock
- 		print("Maximum has not been reached")
+
+	prevNumInLibrary = numInLibrary
 
 	# clear stream for next frame
 	rawCapture.truncate(0)
