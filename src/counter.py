@@ -48,6 +48,7 @@ hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
 	image = frame.array
+	image = imutils.resize(image, width=min(400, image.shape[1]))
 	orig = image.copy()
 
 	if H is None or W is None:
@@ -58,8 +59,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	numExited = 0
 
 	# detect people in the image
-	(rects, weights) = hog.detectMultiScale(image, winStride=(4, 4),
-		padding=(8, 8), scale=1.05)
+	(rects, weights) = hog.detectMultiScale(image, winStride=(8, 8),
+		padding=(16, 16), scale=1.05, useMeanshiftGrouping=False)
 
 	# draw initial bounding boxes
 	for (x, y, w, h) in rects:
@@ -67,7 +68,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
 	# apply non-maxima suppression to bounding boxes (combines overlapping boxes into one)
 	rects = np.array([[x, y, x + w, y + h] for (x, y, w, h) in rects])
-	pick = non_max_suppression(rects, probs=None, overlapThresh=0.65)
+	pick = non_max_suppression(rects, probs=None, overlapThresh=0.3)
 
 	# draw final bounding boxes
 	for (xA, yA, xB, yB) in pick:
