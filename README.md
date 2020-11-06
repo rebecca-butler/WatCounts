@@ -9,7 +9,7 @@ Execute the following command from the `src` folder: `python3 counter.py [-above
 Use the optional `-above` flag to indicate that the camera is positioned above the doorway. If the flag is not given, the camera is assumed to be beside the doorway.
 
 ## Dependencies
-OpenCV
-imutils
-NumPy
-picamera
+- OpenCV
+- imutils
+- numpy
+- picamera
