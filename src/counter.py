@@ -28,7 +28,7 @@ args = parser.parse_args()
 
 # initialize GPIO
 GPIO.setwarnings(False)		# disable warnings
-GPIO.setmode(IO.BCM)		# program GPIO with BCM pin numbers (ie PIN32 as 'GPIO12')
+GPIO.setmode(GPIO.BCM)		# program GPIO with BCM pin numbers (ie PIN32 as 'GPIO12')
 
 # initialize DC motor GPIO control (ENA, IN1 & IN2)
 # remove the jumper on ENA and connect to PWM for speed control, otherwise jumper will run DC motor at max speed
@@ -36,9 +36,9 @@ dir_pin0 = 16
 dir_pin1 = 20
 pwm_pin = 12
 
-GPIO.setup(dir_pin0, IO.OUT)	# set dir0 pin as output (IN1)
-GPIO.setup(dir_pin1, IO.OUT)	# set dir1 pin as output (IN2)
-GPIO.setup(pwm_pin, IO.OUT)		# set pwm pin as output (ENA)
+GPIO.setup(dir_pin0, GPIO.OUT)	# set dir0 pin as output (IN1)
+GPIO.setup(dir_pin1, GPIO.OUT)	# set dir1 pin as output (IN2)
+GPIO.setup(pwm_pin, GPIO.OUT)		# set pwm pin as output (ENA)
 pwm = GPIO.PWM(pwm_pin, 1000)	# PWM output at 1kHz frequency
 pwm.start(0)					# start PWM output
 
