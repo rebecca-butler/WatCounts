@@ -5,6 +5,7 @@ import numpy as np
 import os
 import picamera
 import time
+import RPi.GPIO as GPIO
 from datetime import datetime
 from imutils.object_detection import non_max_suppression
 from picamera.array import PiRGBArray
@@ -24,6 +25,22 @@ time.sleep(0.1)
 parser = argparse.ArgumentParser(description='WatCounts COVID Occupancy Tracker')
 parser.add_argument('-above', action='store_true', help='Camera positioned above entrance')
 args = parser.parse_args()
+
+# initialize GPIO
+GPIO.setwarnings(False)		# disable warnings
+GPIO.setmode(IO.BCM)		# program GPIO with BCM pin numbers (ie PIN32 as 'GPIO12')
+
+# initialize DC motor GPIO control (ENA, IN1 & IN2)
+# remove the jumper on ENA and connect to PWM for speed control, otherwise jumper will run DC motor at max speed
+dir_pin0 = 16
+dir_pin1 = 20
+pwm_pin = 12
+
+GPIO.setup(dir_pin0, IO.OUT)	# set dir0 pin as output (IN1)
+GPIO.setup(dir_pin1, IO.OUT)	# set dir1 pin as output (IN2)
+GPIO.setup(pwm_pin, IO.OUT)		# set pwm pin as output (ENA)
+pwm = GPIO.PWM(pwm_pin, 1000)	# PWM output at 1kHz frequency
+pwm.start(0)					# start PWM output
 
 # create new directory to store frames
 save_dir = '/home/pi/Projects/Videos/{}/'.format(datetime.now())
@@ -153,13 +170,31 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 		print("Num in library: {}, num exited: {}, num entered: {}".format(numInLibrary, numExited, numEntered))
 
 	# activate locking system if needed
+	"""	Directional Output to L298 motor controller
+	IN1	IN2
+	0	0	stop
+	0	1	clockwise
+	1	0	counter-clockwise
+	1	1	stop
+	"""
 	if (prevNumInLibrary <= 45 and numInLibrary > 45):
 		print("Activating lock")
-		# TODO: code to activate lock
+		GPIO.output(dir_pin0, 0)
+		GPIO.output(dir_pin1, 1)
+		pwm.ChangeDutyCycle(50)
 	
 	elif (prevNumInLibrary > 45 and numInLibrary < 45):
  		print("Deactivating lock")
-		# TODO: code to deactivate lock
+		GPIO.output(dir_pin0, 1)
+		GPIO.output(dir_pin1, 0)
+		pwm.ChangeDutyCycle(50)
+	
+	time.sleep(2)
+
+	# stop motor
+	GPIO.output(dir_pin0, 0)
+	GPIO.output(dir_pin1, 0)
+	pwm.ChangeDutyCycle(0)
 
 	prevNumInLibrary = numInLibrary
 
