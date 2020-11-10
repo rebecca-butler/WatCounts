@@ -182,14 +182,14 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 		GPIO.output(dir_pin0, 0)
 		GPIO.output(dir_pin1, 1)
 		pwm.ChangeDutyCycle(50)
+		time.sleep(2)
 	
 	elif (prevNumInLibrary > 45 and numInLibrary < 45):
- 		print("Deactivating lock")
+		print("Deactivating lock")
 		GPIO.output(dir_pin0, 1)
 		GPIO.output(dir_pin1, 0)
 		pwm.ChangeDutyCycle(50)
-	
-	time.sleep(2)
+		time.sleep(2)
 
 	# stop motor
 	GPIO.output(dir_pin0, 0)

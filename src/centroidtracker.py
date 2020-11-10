@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 
 class CentroidTracker:
-	def __init__(self, maxDisappeared=50, maxDistance=50):
+	def __init__(self, maxDisappeared=5, maxDistance=20):
 		self.nextObjectID = 0
 		self.objects = OrderedDict() # store object IDs
 		self.disappeared = OrderedDict() # store number of frames each object has disappeared for
